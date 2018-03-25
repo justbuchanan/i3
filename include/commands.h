@@ -206,6 +206,12 @@ void cmd_focus(I3_CMD);
  */
 void cmd_fullscreen(I3_CMD, const char *action, const char *fullscreen_mode);
 
+
+/**
+ * Implementation of maximize [enable|disable|toggle].
+ */
+void cmd_maximize(I3_CMD, const char* action);
+
 /**
  * Implementation of 'sticky enable|disable|toggle'.
  *

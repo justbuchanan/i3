@@ -44,6 +44,8 @@ Con *con_new_skeleton(Con *parent, i3Window *window) {
     new->window = window;
     new->border_style = config.default_border;
     new->current_border_width = -1;
+    new->maximized = false;
+    // TODO: why isn't fullscreen_mode also initialized here?
     if (window) {
         new->depth = window->depth;
         new->window->aspect_ratio = 0.0;
@@ -451,7 +453,7 @@ Con *con_parent_with_orientation(Con *con, orientation_t orientation) {
 
 /*
  * helper data structure for the breadth-first-search in
- * con_get_fullscreen_con()
+ * _find_con()
  *
  */
 struct bfs_entry {
@@ -461,11 +463,14 @@ struct bfs_entry {
     entries;
 };
 
-/*
- * Returns the first fullscreen node below this node.
+typedef bool (*ConMatcherFunc)(Con *con);
+
+/**
+ * Finds the first node for which the matcher function returns true. Returns
+ * NULL if there are no matches.
  *
  */
-Con *con_get_fullscreen_con(Con *con, fullscreen_mode_t fullscreen_mode) {
+Con *_find_con(Con *con, ConMatcherFunc matcher) {
     Con *current, *child;
 
     /* TODO: is breadth-first-search really appropriate? (check as soon as
@@ -480,7 +485,7 @@ Con *con_get_fullscreen_con(Con *con, fullscreen_mode_t fullscreen_mode) {
     while (!TAILQ_EMPTY(&bfs_head)) {
         entry = TAILQ_FIRST(&bfs_head);
         current = entry->con;
-        if (current != con && current->fullscreen_mode == fullscreen_mode) {
+        if (current != con && matcher(current)) {
             /* empty the queue */
             while (!TAILQ_EMPTY(&bfs_head)) {
                 entry = TAILQ_FIRST(&bfs_head);
@@ -507,6 +512,40 @@ Con *con_get_fullscreen_con(Con *con, fullscreen_mode_t fullscreen_mode) {
     }
 
     return NULL;
+}
+
+bool _con_is_output_fullscreen(Con *con) {
+    return con->fullscreen_mode == CF_OUTPUT;
+}
+
+bool _con_is_global_fullscreen(Con *con) {
+    return con->fullscreen_mode == CF_GLOBAL;
+}
+
+/*
+ * Returns the first fullscreen node below this node.
+ *
+ */
+Con *con_get_fullscreen_con(Con *con, fullscreen_mode_t fullscreen_mode) {
+    if (fullscreen_mode == CF_OUTPUT) {
+        return _find_con(con, _con_is_output_fullscreen);
+    } else if (fullscreen_mode == CF_GLOBAL) {
+        return _find_con(con, _con_is_global_fullscreen);
+    }
+
+    return NULL;
+}
+
+bool _con_is_maximized(Con *con) {
+    return con->maximized;
+}
+
+/*
+ * Returns the first maximized node below this node.
+ *
+ */
+Con *con_get_maximized_con(Con *con) {
+    return _find_con(con, _con_is_maximized);
 }
 
 /**
@@ -1090,6 +1129,83 @@ void con_disable_fullscreen(Con *con) {
     }
 
     con_set_fullscreen_mode(con, CF_NONE);
+}
+
+/*
+ * Toggles zoom mode for the given container.
+ *
+ */
+void con_toggle_maximized(Con *con) {
+    if (con->type == CT_WORKSPACE) {
+        DLOG("You cannot make a workspace maximized.\n");
+        return;
+    }
+
+    DLOG("toggling maximized for %p / %s\n", con, con->name);
+
+    if (con->maximized == false)
+        con_enable_maximized(con);
+    else
+        con_disable_maximized(con);
+}
+
+/**
+ * Helper method that updates the maximized bit and relevant X atoms and sends
+ * an ipc message if applicable.
+ *
+ */
+void _con_set_maximized(Con *con, bool maximized) {
+    assert(con->maximized != maximized); // TODO: rm?
+
+    con->maximized = maximized;
+
+    ipc_send_window_event("maximized", con);
+
+    /* update _NET_WM_STATE if this container has a window */
+    if (con->window == NULL)
+        return;
+
+    if (maximized) {
+        DLOG("Setting _NET_WM_STATE_MAXIMIZED_{HORZ, VERT} for con = %p / window = %d.\n", con, con->window->id);
+        xcb_add_property_atom(conn, con->window->id, A__NET_WM_STATE, A__NET_WM_STATE_MAXIMIZED_HORZ);
+        xcb_add_property_atom(conn, con->window->id, A__NET_WM_STATE, A__NET_WM_STATE_MAXIMIZED_VERT);
+    } else {
+        DLOG("Removing _NET_WM_STATE_MAXIMIZED_{HORZ, VERT} for con = %p / window = %d.\n", con, con->window->id);
+        xcb_remove_property_atom(conn, con->window->id, A__NET_WM_STATE, A__NET_WM_STATE_MAXIMIZED_HORZ);
+        xcb_remove_property_atom(conn, con->window->id, A__NET_WM_STATE, A__NET_WM_STATE_MAXIMIZED_VERT);
+    }
+}
+
+void con_enable_maximized(Con *con) {
+    if (con->type == CT_WORKSPACE) {
+        DLOG("You cannot make a workspace maximized.\n");
+        return;
+    }
+
+    DLOG("enable maximize for %p / %s\n", con, con->name);
+
+    if (con->maximized) {
+        DLOG("maximized already enabled for %p / %s\n", con, con->name);
+        return;
+    }
+
+    _con_set_maximized(con, true);
+}
+
+void con_disable_maximized(Con *con) {
+    if (con->type == CT_WORKSPACE) {
+        DLOG("You cannot make a workspace maximized.\n");
+        return;
+    }
+
+    DLOG("disabling maximized for %p / %s\n", con, con->name);
+
+    if (!con->maximized) {
+        DLOG("maximize already disabled for %p / %s\n", con, con->name);
+        return;
+    }
+
+    _con_set_maximized(con, false);
 }
 
 static bool _con_move_to_con(Con *con, Con *target, bool behind_focused, bool fix_coordinates, bool dont_warp, bool ignore_focus, bool fix_percentage) {
@@ -1989,6 +2105,8 @@ static void con_on_remove_child(Con *con) {
 Rect con_minimum_size(Con *con) {
     DLOG("Determining minimum size for con %p\n", con);
 
+    // TODO: handle maximized?
+
     if (con_is_leaf(con)) {
         DLOG("leaf node, returning 75x50\n");
         return (Rect){0, 0, 75, 50};
@@ -2301,6 +2419,8 @@ bool con_swap(Con *first, Con *second) {
     assert(first != NULL);
     assert(second != NULL);
     DLOG("Swapping containers %p / %p\n", first, second);
+
+    // TODO: maximized
 
     if (first->type != CT_CON) {
         ELOG("Only regular containers can be swapped, but found con = %p with type = %d.\n", first, first->type);

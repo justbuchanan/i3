@@ -684,6 +684,7 @@ static void handle_client_message(xcb_client_message_event_t *event) {
 
     LOG("ClientMessage for window 0x%08x\n", event->window);
     if (event->type == A__NET_WM_STATE) {
+        // TODO: maximized
         if (event->format != 32 ||
             (event->data.data32[1] != A__NET_WM_STATE_FULLSCREEN &&
              event->data.data32[1] != A__NET_WM_STATE_DEMANDS_ATTENTION &&
@@ -697,6 +698,8 @@ static void handle_client_message(xcb_client_message_event_t *event) {
             DLOG("Could not get window for client message\n");
             return;
         }
+
+        // TODO: maximization requests
 
         if (event->data.data32[1] == A__NET_WM_STATE_FULLSCREEN) {
             /* Check if the fullscreen state should be toggled */

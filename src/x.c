@@ -418,6 +418,7 @@ void x_draw_decoration(Con *con) {
      *  • direct children of outputs or dockareas
      *  • floating containers (they don’t have a decoration)
      */
+    // TODO: maximized?
     if ((!leaf &&
          parent->layout != L_STACKED &&
          parent->layout != L_TABBED) ||
@@ -576,6 +577,8 @@ void x_draw_decoration(Con *con) {
 
     /* 6: draw the title */
     int text_offset_y = (con->deco_rect.height - config.font.height) / 2;
+
+    // TODO: add maximized text
 
     struct Window *win = con->window;
     if (win == NULL) {

@@ -1450,6 +1450,27 @@ void cmd_fullscreen(I3_CMD, const char *action, const char *fullscreen_mode) {
     ysuccess(true);
 }
 
+void cmd_maximize(I3_CMD, const char * action) {
+    DLOG("%s maximize on container\n", action);
+    HANDLE_EMPTY_MATCH;
+
+    owindow *current;
+    // TODO(jb): why the foreach?
+    TAILQ_FOREACH(current, &owindows, owindows) {
+        DLOG("setting maximized for container = %p / %s\n", current->con, current->con->name);
+        if (strcmp(action, "toggle") == 0) {
+            con_toggle_maximized(current->con);
+        } else if (strcmp(action, "enable") == 0) {
+            con_enable_maximized(current->con);
+        } else if (strcmp(action, "disable") == 0) {
+            con_disable_maximized(current->con);
+        }
+    }
+
+    cmd_output->needs_tree_render = true;
+    ysuccess(true);
+}
+
 /*
  * Implementation of 'sticky enable|disable|toggle'.
  *

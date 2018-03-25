@@ -160,6 +160,7 @@ is(parser_calls('unknown_literal'),
        kill
        open
        fullscreen
+       maximize
        sticky
        split
        floating

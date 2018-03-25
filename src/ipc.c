@@ -481,6 +481,9 @@ void dump_node(yajl_gen gen, struct Con *con, bool inplace_restart) {
     ystr("fullscreen_mode");
     y(integer, con->fullscreen_mode);
 
+    ystr("maximized");
+    y(bool, con->maximized);
+
     ystr("sticky");
     y(bool, con->sticky);
 
@@ -845,6 +848,8 @@ IPC_HANDLER(get_outputs) {
             ystr(ws->name);
         else
             y(null);
+
+        // TODO: maximized?
 
         y(map_close);
     }

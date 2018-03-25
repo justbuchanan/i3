@@ -44,6 +44,9 @@ void render_con(Con *con, bool render_fullscreen) {
         .y = con->rect.y,
         .children = con_num_children(con)};
 
+    // TODO: make this a parameter like render_fullscreen?
+    bool render_maximized = con->maximized;
+
     DLOG("Rendering %snode %p / %s / layout %d / children %d\n",
          (render_fullscreen ? "fullscreen " : ""), con, con->name, con->layout,
          params.children);
@@ -73,7 +76,7 @@ void render_con(Con *con, bool render_fullscreen) {
          *
          * Ignoring aspect ratio during fullscreen was necessary to fix MPlayer
          * subtitle rendering, see https://bugs.i3wm.org/594 */
-        if (!render_fullscreen && con->window->aspect_ratio > 0.0) {
+        if (!render_fullscreen && !render_maximized && con->window->aspect_ratio > 0.0) {
             DLOG("aspect_ratio = %f, current width/height are %d/%d\n",
                  con->window->aspect_ratio, inset->width, inset->height);
             double new_height = inset->height + 1;
@@ -103,6 +106,7 @@ void render_con(Con *con, bool render_fullscreen) {
     }
 
     /* Check for fullscreen nodes */
+    // TODO: the caller of render_con() (this function) already checked for fullscreen nodes?
     Con *fullscreen = NULL;
     if (con->type != CT_OUTPUT) {
         fullscreen = con_get_fullscreen_con(con, (con->type == CT_ROOT ? CF_GLOBAL : CF_OUTPUT));
@@ -137,6 +141,21 @@ void render_con(Con *con, bool render_fullscreen) {
         render_root(con, fullscreen);
     } else {
         Con *child;
+
+        /* check maximized nodes */
+        // TODO: is this the right palce for this?
+        // TODO: force decoration on?
+        Con *maximized = NULL;
+        if (con->type != CT_OUTPUT && params.children > 0) {
+            maximized = con_get_maximized_con(con);
+        }
+        if (maximized) {
+            maximized->rect = params.rect;
+            x_raise_con(maximized);
+            render_con(maximized, false);
+            return; // TODO: don't return - we need to render the DOCKAREA items
+        }
+
         TAILQ_FOREACH(child, &(con->nodes_head), nodes) {
             assert(params.children > 0);
 
@@ -333,6 +352,15 @@ static void render_output(Con *con) {
         fullscreen->rect = con->rect;
         x_raise_con(fullscreen);
         render_con(fullscreen, true);
+        return;
+    }
+
+    Con *maximized = con_get_maximized_con(ws);
+    if (maximized) {
+        // maximized->rect = // TODO
+
+        x_raise_con(maximized);
+        render_con(maximized, true);
         return;
     }
 

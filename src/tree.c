@@ -524,6 +524,7 @@ static bool _tree_next(Con *con, char way, orientation_t orientation, bool wrap)
      * workspace level, because 'focus $dir' will start at the con's real
      * position in the tree, and it may not be possible to get to the edge
      * normally due to fullscreen focusing restrictions. */
+    // TODO: maximized?
     if (con->fullscreen_mode == CF_OUTPUT && con->type != CT_WORKSPACE)
         con = con_get_workspace(con);
 

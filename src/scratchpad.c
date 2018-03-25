@@ -108,7 +108,10 @@ bool scratchpad_show(Con *con) {
 
     if (fs && fs->type != CT_WORKSPACE) {
         con_toggle_fullscreen(fs, CF_OUTPUT);
+        // TODO: prefer con_disable_fullscreen()?
     }
+
+    // TODO: disable maximized?
 
     /* If this was 'scratchpad show' without criteria, we check if there is a
      * unfocused scratchpad on the current workspace and focus it */

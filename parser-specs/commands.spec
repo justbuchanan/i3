@@ -29,6 +29,7 @@ state INITIAL:
   'kill' -> KILL
   'open' -> call cmd_open()
   'fullscreen' -> FULLSCREEN
+  'maximize' -> MAXIMIZE
   'sticky' -> STICKY
   'split' -> SPLIT
   'floating' -> FLOATING
@@ -188,6 +189,10 @@ state FULLSCREEN_COMPAT:
       -> call cmd_fullscreen("toggle", $mode)
   end
       -> call cmd_fullscreen("toggle", "output")
+
+state MAXIMIZE:
+  action = 'enable', 'disable', 'toggle'
+      -> call cmd_maximize($action)
 
 # sticky enable|disable|toggle
 state STICKY:

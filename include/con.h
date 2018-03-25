@@ -121,6 +121,12 @@ Con *con_parent_with_orientation(Con *con, orientation_t orientation);
 Con *con_get_fullscreen_con(Con *con, fullscreen_mode_t fullscreen_mode);
 
 /**
+ * Returns the first maximized node below this node.
+ *
+ */
+Con *con_get_maximized_con(Con *con);
+
+/**
  * Returns true if the container is internal, such as __i3_scratch
  *
  */
@@ -307,6 +313,10 @@ void con_enable_fullscreen(Con *con, fullscreen_mode_t fullscreen_mode);
  *
  */
 void con_disable_fullscreen(Con *con);
+
+void con_toggle_maximized(Con *con);
+void con_enable_maximized(Con *con);
+void con_disable_maximized(Con *con);
 
 /**
  * Moves the given container to the currently focused container on the given
