@@ -1096,6 +1096,11 @@ void con_enable_fullscreen(Con *con, fullscreen_mode_t fullscreen_mode) {
     if (fullscreen != NULL)
         con_disable_fullscreen(fullscreen);
 
+    // Disable maximized mode if set
+    if (con->maximized) {
+        con_disable_maximized(con);
+    }
+
     /* Set focus to new fullscreen container. Unless in global fullscreen mode
      * and on another workspace restore focus afterwards.
      * Switch to the container’s workspace if mode is global. */
@@ -1154,8 +1159,8 @@ void con_toggle_maximized(Con *con) {
  * an ipc message if applicable.
  *
  */
-void _con_set_maximized(Con *con, bool maximized) {
-    assert(con->maximized != maximized); // TODO: rm?
+void con_set_maximized(Con *con, bool maximized) {
+    assert(con->maximized != maximized);
 
     con->maximized = maximized;
 
@@ -1189,7 +1194,12 @@ void con_enable_maximized(Con *con) {
         return;
     }
 
-    _con_set_maximized(con, true);
+    // Disable fullscreen mode if set
+    if (con->fullscreen_mode != CF_NONE) {
+        con_disable_fullscreen(con);
+    }
+
+    con_set_maximized(con, true);
 }
 
 void con_disable_maximized(Con *con) {
@@ -1205,7 +1215,7 @@ void con_disable_maximized(Con *con) {
         return;
     }
 
-    _con_set_maximized(con, false);
+    con_set_maximized(con, false);
 }
 
 static bool _con_move_to_con(Con *con, Con *target, bool behind_focused, bool fix_coordinates, bool dont_warp, bool ignore_focus, bool fix_percentage) {
@@ -2104,8 +2114,6 @@ static void con_on_remove_child(Con *con) {
  */
 Rect con_minimum_size(Con *con) {
     DLOG("Determining minimum size for con %p\n", con);
-
-    // TODO: handle maximized?
 
     if (con_is_leaf(con)) {
         DLOG("leaf node, returning 75x50\n");

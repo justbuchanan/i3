@@ -413,6 +413,7 @@ void x_draw_decoration(Con *con) {
     /* This code needs to run for:
      *  • leaf containers
      *  • non-leaf containers which are in a stacked/tabbed container
+     *  • maximized containers
      *
      * It does not need to run for:
      *  • direct children of outputs or dockareas

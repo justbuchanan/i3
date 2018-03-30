@@ -1455,7 +1455,6 @@ void cmd_maximize(I3_CMD, const char * action) {
     HANDLE_EMPTY_MATCH;
 
     owindow *current;
-    // TODO(jb): why the foreach?
     TAILQ_FOREACH(current, &owindows, owindows) {
         DLOG("setting maximized for container = %p / %s\n", current->con, current->con->name);
         if (strcmp(action, "toggle") == 0) {

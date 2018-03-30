@@ -849,8 +849,6 @@ IPC_HANDLER(get_outputs) {
         else
             y(null);
 
-        // TODO: maximized?
-
         y(map_close);
     }
 

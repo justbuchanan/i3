@@ -684,9 +684,10 @@ static void handle_client_message(xcb_client_message_event_t *event) {
 
     LOG("ClientMessage for window 0x%08x\n", event->window);
     if (event->type == A__NET_WM_STATE) {
-        // TODO: maximized
         if (event->format != 32 ||
             (event->data.data32[1] != A__NET_WM_STATE_FULLSCREEN &&
+             event->data.data32[1] != A__NET_WM_STATE_MAXIMIZED_VERT &&
+             event->data.data32[1] != A__NET_WM_STATE_MAXIMIZED_HORZ &&
              event->data.data32[1] != A__NET_WM_STATE_DEMANDS_ATTENTION &&
              event->data.data32[1] != A__NET_WM_STATE_STICKY)) {
             DLOG("Unknown atom in clientmessage of type %d\n", event->data.data32[1]);
@@ -699,8 +700,6 @@ static void handle_client_message(xcb_client_message_event_t *event) {
             return;
         }
 
-        // TODO: maximization requests
-
         if (event->data.data32[1] == A__NET_WM_STATE_FULLSCREEN) {
             /* Check if the fullscreen state should be toggled */
             if ((con->fullscreen_mode != CF_NONE &&
@@ -711,6 +710,15 @@ static void handle_client_message(xcb_client_message_event_t *event) {
                   event->data.data32[0] == _NET_WM_STATE_TOGGLE))) {
                 DLOG("toggling fullscreen\n");
                 con_toggle_fullscreen(con, CF_OUTPUT);
+            }
+        } else if (event->data.data32[1] == A__NET_WM_STATE_MAXIMIZED_VERT ||
+                event->data.data32[1] == A__NET_WM_STATE_MAXIMIZED_HORZ) {
+            /* Note that i3 does not maximize the horizontal and vertical directions separately - either both are maximized or neither. */
+            if ((con->maximized && event->data.data32[0] == _NET_WM_STATE_REMOVE) ||
+                    (!con->maximized && event->data32[0] == _NET_WM_STATE_ADD) ||
+                    event->data.data32[0] == _NET_WM_STATE_TOGGLE) {
+                DLOG("toggling maximized\n");
+                con_toggle_maximized(con);
             }
         } else if (event->data.data32[1] == A__NET_WM_STATE_DEMANDS_ATTENTION) {
             /* Check if the urgent flag must be set or not */
