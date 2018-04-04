@@ -715,7 +715,7 @@ static void handle_client_message(xcb_client_message_event_t *event) {
                 event->data.data32[1] == A__NET_WM_STATE_MAXIMIZED_HORZ) {
             /* Note that i3 does not maximize the horizontal and vertical directions separately - either both are maximized or neither. */
             if ((con->maximized && event->data.data32[0] == _NET_WM_STATE_REMOVE) ||
-                    (!con->maximized && event->data32[0] == _NET_WM_STATE_ADD) ||
+                    (!con->maximized && event->data.data32[0] == _NET_WM_STATE_ADD) ||
                     event->data.data32[0] == _NET_WM_STATE_TOGGLE) {
                 DLOG("toggling maximized\n");
                 con_toggle_maximized(con);
